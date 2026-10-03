@@ -1,0 +1,9 @@
+fastapi
+faiss-cpu
+groq
+PyMuPDF
+python-dotenv
+python-multipart
+sentence-transformers
+SQLAlchemy
+uvicorn[standard]

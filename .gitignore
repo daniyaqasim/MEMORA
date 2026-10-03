@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# Local uploaded memory files (the empty directory placeholder is retained)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Local SQLite data (the empty directory placeholder is retained)
+backend/data/*
+!backend/data/.gitkeep
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.vscode/
