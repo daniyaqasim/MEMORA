@@ -1,9 +1,10 @@
 fastapi
 faiss-cpu
 groq
+huggingface_hub
+numpy
 PyMuPDF
 python-dotenv
 python-multipart
-sentence-transformers
 SQLAlchemy
 uvicorn[standard]

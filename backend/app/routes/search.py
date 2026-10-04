@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.services.answering import answer_from_memories, unique_memory_sources
+from app.services.embeddings import EmbeddingConfigurationError, EmbeddingServiceError
 from app.services.llm import LLMConfigurationError, LLMServiceError
 from app.services.search import semantic_search
 
@@ -23,7 +24,12 @@ def search_memories(request: SearchRequest, db: Session = Depends(get_db)) -> di
     if not question:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Enter a question to search memories.")
 
-    sources = unique_memory_sources(semantic_search(db, question, RESULT_LIMIT))
+    try:
+        sources = unique_memory_sources(semantic_search(db, question, RESULT_LIMIT))
+    except EmbeddingConfigurationError as error:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)) from error
+    except EmbeddingServiceError as error:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(error)) from error
     if not sources:
         return {
             "question": question,
