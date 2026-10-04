@@ -26,11 +26,14 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="MEMORA API", lifespan=lifespan)
 
-# Local Vite development servers. Public deployment origins can be added later
-# through deployment configuration when a frontend domain is chosen.
+# Local Vite development servers and the deployed MEMORA frontend.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://memora-six-psi.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
