@@ -29,14 +29,21 @@ def init_db() -> None:
     """Create the local data directory and apply safe additive MVP schema updates."""
     DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
     from app import models  # Ensure model metadata is registered before create_all.
+    from app.services.sessions import LEGACY_SESSION_ID
 
     Base.metadata.create_all(bind=engine)
     existing_columns = {column["name"] for column in inspect(engine).get_columns("memories")}
     additions = {
         "summary": "TEXT",
         "context_inference": "TEXT",
+        "session_id": "TEXT",
     }
     with engine.begin() as connection:
         for column_name, column_type in additions.items():
             if column_name not in existing_columns:
                 connection.execute(text(f"ALTER TABLE memories ADD COLUMN {column_name} {column_type}"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_memories_session_id ON memories (session_id)"))
+        connection.execute(
+            text("UPDATE memories SET session_id = :legacy_session_id WHERE session_id IS NULL OR session_id = ''"),
+            {"legacy_session_id": LEGACY_SESSION_ID},
+        )

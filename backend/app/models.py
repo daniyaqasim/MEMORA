@@ -10,6 +10,7 @@ class Memory(Base):
     __tablename__ = "memories"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     stored_filename: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     file_type: Mapped[str] = mapped_column(String(20), nullable=False)

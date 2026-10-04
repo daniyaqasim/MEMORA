@@ -1,22 +1,131 @@
 # MEMORA
 
-MEMORA is an AI-powered personal memory system in development. Its eventual purpose is to help people save scattered digital information and find it again through natural-language questions.
+MEMORA is an AI-powered personal memory system that helps people recover information from the digital things they save—screenshots, PDFs, images, and notes—using meaning and context rather than filenames or folders.
 
-## Stage 5: AI memory intelligence
+## The Problem
 
-This stage provides a clean dashboard, a FastAPI health endpoint, and local memory-file ingestion. The **Add Memory** control accepts PDF, PNG, JPEG, and TXT files up to 10 MB. Every new upload is stored under a generated filename and saved as a persistent SQLite memory record in `backend/data/memora.db`.
+People save useful information across screenshots, documents, notes, receipts, and other digital sources. Later, they often remember what they saw but not where they saved it. Traditional storage systems organize information by location and file structure; MEMORA is designed to make it retrievable through meaning and context instead.
 
-TXT and text-based PDF files have their text extracted; image files are persisted without OCR. Extracted TXT/PDF text is split into chunks, embedded locally with `all-MiniLM-L6-v2`, and indexed in `backend/data/memora.faiss`. With configured Groq hosted inference, MEMORA generates grounded answers from retrieved memory evidence and saves a factual summary plus a cautious likely-context inference for extracted memories.
+## What MEMORA Does
 
-## Project structure
+1. Add a memory from a PDF, TXT file, PNG, JPG, or JPEG.
+2. Extract or understand its content, including image understanding for screenshots.
+3. Chunk and embed usable content for semantic retrieval.
+4. Ask a natural-language question about something you vaguely remember.
+5. Retrieve relevant memory evidence and generate a grounded answer.
+6. Show the original supporting source, a short summary, and a cautious inference about why it may have been saved.
+
+### Example
+
+A user saves a screenshot containing several scholarship names. Weeks later, they ask: “What were the scholarships I was looking at?” MEMORA retrieves the screenshot by meaning, answers from its understood content, and points back to the original memory.
+
+## Current Features
+
+- TXT and text-based PDF ingestion and extraction
+- PNG, JPG, and JPEG screenshot/image understanding
+- Persistent memory and chunk metadata
+- Semantic retrieval across saved memories
+- Grounded natural-language Q&A with original-source attribution
+- AI-generated summary and cautious likely-context inference
+- Anonymous browser-session isolation for the public MVP
+- Responsive React web interface
+
+## Architecture
+
+```text
+React + Vite frontend
+        ↓
+FastAPI API
+        ↓
+Ingestion / extraction / image understanding
+        ↓
+Deterministic chunking
+        ↓
+Hugging Face embedding inference
+        ↓
+FAISS vector search + SQLite metadata
+        ↓
+Session-scoped semantic retrieval
+        ↓
+Groq-hosted LLM
+        ↓
+Grounded answer + source + likely context
+```
+
+TXT and PDF content is extracted with PyMuPDF where applicable. Images are understood through the configured Groq vision model, then represented as text before entering the same chunking, embedding, and FAISS retrieval path. Embeddings are generated remotely through Hugging Face `InferenceClient`; the backend does not load sentence-transformers or PyTorch locally. The configured default embedding model is `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions).
+
+## Tech Stack
+
+| Area | Technology |
+| --- | --- |
+| Frontend | React, Vite |
+| Backend | Python, FastAPI |
+| Metadata | SQLite, SQLAlchemy |
+| Vector search | FAISS |
+| PDF extraction | PyMuPDF |
+| Embeddings | Hugging Face `InferenceClient` with the configured embedding model |
+| Grounded answering | Groq-hosted configured language model |
+| Image understanding | Configured Groq vision model |
+
+## Privacy / Session Model
+
+The public MVP does not require accounts. Each browser receives a locally stored anonymous session identifier, and upload, list, detail, image, deletion, and retrieval operations are scoped to that identifier. This is lightweight MVP isolation, not production-grade authentication or a replacement for authenticated multi-user storage.
+
+## Running Locally
+
+### Backend
+
+From the project root:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt
+python -m uvicorn app.main:app --app-dir backend --reload
+```
+
+The API runs at `http://127.0.0.1:8000`; health is available at `http://127.0.0.1:8000/api/health` and API docs at `http://127.0.0.1:8000/docs`.
+
+### Frontend
+
+In a second terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open the Vite URL printed in the terminal (normally `http://localhost:5173`).
+
+## Environment Variables
+
+Copy `backend/.env.example` to `backend/.env` and provide the required server-side values. Never commit real keys or tokens.
+
+| Variable | Purpose |
+| --- | --- |
+| `GROQ_API_KEY` | Groq API credential for configured language and vision inference |
+| `GROQ_MODEL` | Grounded-answering and text-analysis model |
+| `GROQ_VISION_MODEL` | Image-understanding model |
+| `HF_TOKEN` | Hugging Face inference credential for embeddings |
+| `HF_EMBEDDING_MODEL` | Remote embedding model identifier |
+| `VITE_API_BASE_URL` | Frontend build-time API origin; leave blank for local Vite proxy |
+
+`VITE_API_BASE_URL` is documented in `frontend/.env.example`; backend variables are documented in `backend/.env.example`.
+
+## Deployment
+
+- Frontend: Vercel
+- Backend: Render
+- Live demo: https://memora-six-psi.vercel.app
+
+The free backend may take a short moment to wake after inactivity.
+
+## Project Structure
 
 ```text
 backend/
   app/
-    __init__.py
-    database.py
-    main.py
-    models.py
     routes/
       memories.py
       search.py
@@ -26,70 +135,38 @@ backend/
       chunking.py
       embeddings.py
       extraction.py
+      image_processing.py
       indexing.py
       llm.py
       search.py
+      sessions.py
       vector_store.py
+    database.py
+    main.py
+    models.py
   data/
-  requirements.txt
   uploads/
+  .env.example
+  requirements.txt
 frontend/
   src/
     App.jsx
-    main.jsx
+    session.js
     styles.css
   .env.example
-  index.html
-  package.json
   vite.config.js
-demo-data/
+README.md
 ```
 
-## Run locally
+## MVP Scope / Roadmap
 
-### Backend
+The current MVP focuses on two capabilities:
 
-From the project root, create and activate a virtual environment (optional but recommended):
+- **Find:** retrieve saved information by meaning.
+- **Understand:** extract or interpret what a memory contains and infer likely context.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+Potential future directions include remembering deadlines or commitments, connecting related memories, user-approved actions and integrations, authenticated accounts, stronger multi-user storage, and additional data-source integrations. These are not implemented in the current MVP.
 
-Install the backend dependencies:
+## Status
 
-```powershell
-python -m pip install -r backend\requirements.txt
-```
-
-Start FastAPI:
-
-```powershell
-python -m uvicorn app.main:app --app-dir backend --reload
-```
-
-The health endpoint is available at http://127.0.0.1:8000/api/health and FastAPI's interactive docs are at http://127.0.0.1:8000/docs.
-
-### Frontend
-
-In a second terminal, install and start the Vite app:
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-Open the URL Vite prints (normally http://localhost:5173).
-
-## API configuration
-
-For local development, Vite proxies `/api` calls to the FastAPI server at `http://127.0.0.1:8000`. For a later deployment, set `VITE_API_BASE_URL` to the deployed API origin during the frontend build. See `frontend/.env.example`.
-
-## Hosted inference configuration
-
-Copy `backend/.env.example` to `backend/.env`, then set `GROQ_API_KEY` and a supported `GROQ_MODEL`. The key remains server-side and is never sent to the frontend.
-
-## Earlier-stage upgrade note
-
-Stage 2 uploads already in `backend/uploads/` are intentionally not imported into SQLite because they have no reliable metadata records. Upload new files after installing the dependencies to create persistent memories. To reset all local Stage 3/4 metadata and vectors during development, stop the API and remove both `backend/data/memora.db` and `backend/data/memora.faiss`; this does not delete uploaded files.
+MEMORA is a working MVP/prototype that is actively being developed.

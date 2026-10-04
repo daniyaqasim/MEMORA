@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { getMemoraSessionId, memoraSessionHeaders } from './session'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const supportedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'txt']
@@ -44,6 +45,11 @@ function App() {
   const [searchError, setSearchError] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef(null)
+  const imageUrlRef = useRef('')
+
+  useEffect(() => {
+    getMemoraSessionId()
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -85,7 +91,7 @@ function App() {
     setMemoriesLoading(true)
     setMemoriesError('')
     try {
-      const response = await fetch(`${apiBaseUrl}/api/memories`)
+      const response = await fetch(`${apiBaseUrl}/api/memories`, { headers: memoraSessionHeaders() })
       const data = await response.json().catch(() => [])
       if (!response.ok) throw new Error(data.detail || 'Saved memories could not be loaded.')
       setRecentMemories(data)
@@ -98,14 +104,22 @@ function App() {
   }
 
   async function openMemoryDetail(memoryId) {
+    if (imageUrlRef.current) {
+      URL.revokeObjectURL(imageUrlRef.current)
+      imageUrlRef.current = ''
+    }
     setSelectedMemory(null)
     setDetailState('loading')
     setDetailError('')
     setDeleteState('idle')
     try {
-      const response = await fetch(`${apiBaseUrl}/api/memories/${memoryId}`)
+      const response = await fetch(`${apiBaseUrl}/api/memories/${memoryId}`, { headers: memoraSessionHeaders() })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.detail || 'Memory details could not be loaded.')
+      if (['png', 'jpeg'].includes(data.file_type)) {
+        const imageResponse = await fetch(`${apiBaseUrl}/api/memories/${memoryId}/image`, { headers: memoraSessionHeaders() })
+        if (imageResponse.ok) imageUrlRef.current = URL.createObjectURL(await imageResponse.blob())
+      }
       setSelectedMemory(data)
       setDetailState('ready')
     } catch (error) {
@@ -115,6 +129,10 @@ function App() {
   }
 
   function closeMemoryDetail() {
+    if (imageUrlRef.current) {
+      URL.revokeObjectURL(imageUrlRef.current)
+      imageUrlRef.current = ''
+    }
     setDetailState('idle')
     setSelectedMemory(null)
     setDetailError('')
@@ -128,7 +146,10 @@ function App() {
     setDeleteState('deleting')
     setDetailError('')
     try {
-      const response = await fetch(`${apiBaseUrl}/api/memories/${selectedMemory.id}`, { method: 'DELETE' })
+      const response = await fetch(`${apiBaseUrl}/api/memories/${selectedMemory.id}`, {
+        method: 'DELETE',
+        headers: memoraSessionHeaders(),
+      })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.detail || 'Memory deletion failed. Please try again.')
 
@@ -153,7 +174,7 @@ function App() {
     try {
       const response = await fetch(`${apiBaseUrl}/api/search`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...memoraSessionHeaders() },
         body: JSON.stringify({ question }),
       })
       const data = await response.json().catch(() => ({}))
@@ -216,6 +237,7 @@ function App() {
       const response = await fetch(`${apiBaseUrl}/api/memories/upload`, {
         method: 'POST',
         body: formData,
+        headers: memoraSessionHeaders(),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.detail || 'Upload failed. Please try again.')
@@ -244,12 +266,13 @@ function App() {
         <div className="hero-content">
         <p className="eyebrow">PERSONAL MEMORY SYSTEM</p>
         <h1 id="page-title">Your digital life,<br />remembered.</h1>
-        <p className="intro">A quiet place for the details you do not want to lose.</p>
+        <p className="intro">Save the screenshots, PDFs, notes and everyday digital clutter you do not want to lose. MEMORA understands what they contain, remembers the context, and helps you find them again by meaning.</p>
+        <p className="product-flow">Add anything → MEMORA understands it → Ask what you remember</p>
 
         <form className="search-box" onSubmit={searchMemories}>
           <label className="sr-only" htmlFor="memory-search">Search your memories</label>
           <span className="search-icon" aria-hidden="true">⌕</span>
-          <input id="memory-search" type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Ask anything you've saved..." />
+          <input id="memory-search" type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Ask MEMORA what you remember, not where you saved it." />
           <button type="submit" disabled={!searchQuery.trim() || searchState === 'searching'}>{searchState === 'searching' ? 'Thinking...' : 'Ask MEMORA'}</button>
         </form>
 
@@ -287,7 +310,10 @@ function App() {
             <p className="eyebrow">YOUR SPACE</p>
             <h2>Memory overview</h2>
           </div>
-          <button className="add-memory" type="button" onClick={openUpload}><span aria-hidden="true">+</span> Add Memory</button>
+          <div className="memory-actions">
+            <span className="memory-types">Screenshots · PDFs · Images · Notes</span>
+            <button className="add-memory" type="button" onClick={openUpload}><span aria-hidden="true">+</span> Add Memory</button>
+          </div>
         </div>
 
         {uploadNotice && <p className="upload-notice" role="status">{uploadNotice}</p>}
@@ -389,7 +415,7 @@ function App() {
                   {['png', 'jpeg'].includes(selectedMemory.file_type) && (
                     <div className="original-image">
                       <h4>Original image</h4>
-                      <img src={`${apiBaseUrl}/api/memories/${selectedMemory.id}/image`} alt={`Original upload: ${selectedMemory.filename}`} />
+                      {imageUrlRef.current ? <img src={imageUrlRef.current} alt={`Original upload: ${selectedMemory.filename}`} /> : <p>The original image could not be loaded.</p>}
                     </div>
                   )}
                   <div className="ai-understanding">

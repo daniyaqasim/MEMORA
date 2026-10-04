@@ -38,6 +38,7 @@ h1, h2, h3, p { margin-top: 0; }
 .eyebrow { margin: 0 0 10px; color: var(--muted); font-size: .68rem; font-weight: 750; letter-spacing: .13em; }
 h1 { max-width: 720px; margin-bottom: 14px; letter-spacing: -.057em; font-size: clamp(3.1rem, 5.4vw, 5.35rem); line-height: .96; font-weight: 650; }
 .intro { max-width: 640px; margin-bottom: 23px; color: var(--muted); font-size: 1.08rem; }
+.product-flow { margin: -9px 0 18px; color: var(--sage-dark); font-size: .79rem; font-weight: 650; }
 .search-box { width: 100%; padding: 7px 7px 7px 18px; border: 1px solid #c8d5c4; border-radius: 13px; background: var(--surface); display: flex; align-items: center; box-shadow: 0 8px 25px rgba(37, 45, 38, .05); }
 .search-icon { color: var(--muted); font-size: 1.45rem; line-height: 1; transform: rotate(-20deg); }
 .search-box input { width: 100%; min-width: 0; margin: 0 10px; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: .98rem; }
@@ -70,6 +71,8 @@ h1 { max-width: 720px; margin-bottom: 14px; letter-spacing: -.057em; font-size: 
 .add-memory { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; background: var(--surface); color: var(--ink); font-size: .84rem; font-weight: 650; }
 .add-memory:hover { border-color: #b9c3b9; background: var(--surface-muted); }
 .add-memory span { margin-right: 4px; font-size: 1.05rem; }
+.memory-actions { display: flex; flex-direction: column; align-items: end; gap: 8px; }
+.memory-types { color: var(--soft-muted); font-size: .72rem; font-weight: 600; }
 .upload-notice { margin: 13px 0 0; color: var(--sage-dark); font-size: .8rem; font-weight: 650; }
 
 .upload-modal-backdrop { position: fixed; z-index: 20; inset: 0; padding: 28px; background: rgba(29, 34, 29, .25); display: flex; align-items: center; justify-content: center; }
@@ -138,6 +141,7 @@ h1 { max-width: 720px; margin-bottom: 14px; letter-spacing: -.057em; font-size: 
   h1 { font-size: clamp(3rem, 13vw, 4.2rem); }
   .dashboard { padding: 30px 20px 57px; }
   .section-heading { align-items: center; }
+  .memory-actions { gap: 6px; }
   .search-box button { padding: 10px 12px; }
   .upload-panel { padding: 18px; }
   .memory-row { padding: 12px; }
@@ -152,6 +156,7 @@ h1 { max-width: 720px; margin-bottom: 14px; letter-spacing: -.057em; font-size: 
 @media (max-width: 460px) {
   .api-status { font-size: .68rem; }
   .section-heading, .recent-header { gap: 14px; }
+  .memory-types { display: none; }
   .add-memory { padding: 9px 11px; white-space: nowrap; }
   .memory-modal-backdrop, .upload-modal-backdrop { padding: 12px; }
   .memory-detail { max-height: calc(100vh - 24px); }

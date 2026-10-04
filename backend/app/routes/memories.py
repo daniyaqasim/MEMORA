@@ -13,6 +13,7 @@ from app.services.analysis import analyze_memory
 from app.services.extraction import extract_text
 from app.services.image_processing import IMAGE_MIME_TYPES, process_image_memory
 from app.services.indexing import index_memory, rebuild_vector_index
+from app.services.sessions import get_session_id
 
 
 router = APIRouter(prefix="/api/memories", tags=["memories"])
@@ -77,7 +78,9 @@ def serialize_memory(memory: Memory, include_extracted_text: bool = False) -> di
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 async def upload_memory(
-    file: UploadFile | None = File(default=None), db: Session = Depends(get_db)
+    file: UploadFile | None = File(default=None),
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
 ) -> dict[str, str | int | None]:
     """Store a file, create its persistent memory record, then extract supported text."""
     if file is None:
@@ -120,6 +123,7 @@ async def upload_memory(
 
     memory = Memory(
         id=memory_id,
+        session_id=session_id,
         filename=original_filename,
         stored_filename=stored_file.name,
         file_type=file_type,
@@ -185,25 +189,43 @@ async def upload_memory(
 
 
 @router.get("")
-def list_memories(db: Session = Depends(get_db)) -> list[dict[str, str | int | None]]:
+def list_memories(
+    db: Session = Depends(get_db), session_id: str = Depends(get_session_id)
+) -> list[dict[str, str | int | None]]:
     """List persisted memories with newest uploads first."""
-    memories = db.scalars(select(Memory).order_by(Memory.uploaded_at.desc())).all()
+    memories = db.scalars(
+        select(Memory)
+        .where(Memory.session_id == session_id)
+        .order_by(Memory.uploaded_at.desc())
+    ).all()
     return [serialize_memory(memory) for memory in memories]
 
 
 @router.get("/{memory_id}")
-def get_memory(memory_id: str, db: Session = Depends(get_db)) -> dict[str, str | int | None]:
+def get_memory(
+    memory_id: str,
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+) -> dict[str, str | int | None]:
     """Return one persisted memory and any text extracted in Stage 3."""
-    memory = db.get(Memory, memory_id)
+    memory = db.scalar(
+        select(Memory).where(Memory.id == memory_id, Memory.session_id == session_id)
+    )
     if memory is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory not found.")
     return serialize_memory(memory, include_extracted_text=True)
 
 
 @router.get("/{memory_id}/image")
-def get_memory_image(memory_id: str, db: Session = Depends(get_db)) -> FileResponse:
+def get_memory_image(
+    memory_id: str,
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+) -> FileResponse:
     """Serve an original image only through its persisted memory ID."""
-    memory = db.get(Memory, memory_id)
+    memory = db.scalar(
+        select(Memory).where(Memory.id == memory_id, Memory.session_id == session_id)
+    )
     if memory is None or memory.file_type not in IMAGE_MIME_TYPES:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image memory not found.")
 
@@ -214,9 +236,15 @@ def get_memory_image(memory_id: str, db: Session = Depends(get_db)) -> FileRespo
 
 
 @router.delete("/{memory_id}")
-def delete_memory(memory_id: str, db: Session = Depends(get_db)) -> dict[str, str]:
+def delete_memory(
+    memory_id: str,
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+) -> dict[str, str]:
     """Remove a memory, its chunks, its vector presence, and its stored file."""
-    memory = db.get(Memory, memory_id)
+    memory = db.scalar(
+        select(Memory).where(Memory.id == memory_id, Memory.session_id == session_id)
+    )
     if memory is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory not found.")
 
