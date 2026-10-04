@@ -13,8 +13,10 @@
     "react-dom": "latest"
   },
   "devDependencies": {
-    "@rolldown/binding-win32-x64-msvc": "^1.2.12",
     "@vitejs/plugin-react": "latest",
     "vite": "latest"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.2.12"
   }
 }
